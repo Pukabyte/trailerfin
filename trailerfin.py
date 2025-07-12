@@ -42,6 +42,34 @@ try:
 except ValueError:
     default_worker_count = 4
 
+def tmdb_to_imdb(tmdb_id):
+    """Convert TMDB ID to IMDB ID using TMDB API. Try both as movie and TV show."""
+    if not tmdb_api_key:
+        logging.error("TMDB_API_KEY not set. Please set it in the .env file or as an environment variable.")
+        return None
+    # Try as movie
+    url_movie = f"https://api.themoviedb.org/3/movie/{tmdb_id}/external_ids?api_key={tmdb_api_key}"
+    try:
+        response = requests.get(url_movie, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            imdb_id = data.get("imdb_id")
+            if imdb_id and imdb_id.startswith("tt"):
+                return imdb_id
+        # Try as TV Shows if it fails
+        url_tv = f"https://api.themoviedb.org/3/tv/{tmdb_id}/external_ids?api_key={tmdb_api_key}"
+        response = requests.get(url_tv, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            imdb_id = data.get("imdb_id")
+            if imdb_id and imdb_id.startswith("tt"):
+                return imdb_id
+        else:
+            logging.error(f"TMDB API error {response.status_code} for TMDB ID {tmdb_id}")
+    except Exception as e:
+        logging.error(f"Error converting TMDB->IMDB: {e}")
+    return None
+
 def get_trailer_video_page_url(imdb_id):
     def find_trailer_in_page(soup):
         trailer_spans = soup.find_all('span', class_='ipc-lockup-overlay__text ipc-lockup-overlay__text--clamp-none')
